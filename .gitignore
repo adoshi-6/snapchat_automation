@@ -4,7 +4,8 @@
 config.json
 
 # Local Monument Catalog (your personal images)
-monuments/
+monuments/*
+!monuments/.gitkeep
 
 # Python cache & virtual environment
 __pycache__/

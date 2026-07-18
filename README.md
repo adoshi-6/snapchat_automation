@@ -73,7 +73,7 @@ Screen coordinates are configured in `config.json`. If button positions differ o
 
 ## Usage
 
-Create a folder named `monuments` in the same directory as the script and add your cycle photos.
+Add your photos (such as monument images) to the pre-created `monuments/` folder. The folder itself is tracked in Git, but its contents are ignored so your personal photos will not be committed.
 
 ### Single Run
 To run the script once for testing:
