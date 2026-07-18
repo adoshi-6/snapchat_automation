@@ -5,7 +5,7 @@ An automated tool to cycle through local photos and send them as daily Snapchat 
 **Note:** This tool is only compatible with Android environments. It relies on the Android Debug Bridge (ADB) to simulate screen inputs and does not support iOS devices (iPhones).
 
 ## Features
-- Cycles through images in a local folder (`monuments/`).
+- Cycles through images in a local folder (`images/`).
 - Triggers the Android media library to index newly pushed files, making them immediately visible in the Snapchat Camera Roll.
 - Simulates screen taps, text input, and searches via ADB.
 - Includes a daily scheduling daemon (`--daemon`) that calculates wait times between runs.
@@ -47,7 +47,7 @@ If the emulator cannot connect to the internet and you are sharing your connecti
 - `snapchat_streak.py`: Main execution script.
 - `config.json`: Configuration settings for the ADB path, Snapchat shortcut, run history, and tap coordinates.
 - `setup_scheduler.ps1`: PowerShell script to register the Windows Scheduled Task.
-- `monuments/`: Directory holding the images to cycle through.
+- `images/`: Directory holding the images to cycle through.
 - `scheduler.log`: Log file tracking script run status.
 
 ## Configuration
@@ -73,7 +73,7 @@ Screen coordinates are configured in `config.json`. If button positions differ o
 
 ## Usage
 
-Add your photos (such as monument images) to the pre-created `monuments/` folder. The folder itself is tracked in Git, but its contents are ignored so your personal photos will not be committed.
+Add your photos to the pre-created `images/` folder. The folder itself is tracked in Git, but its contents are ignored so your personal photos will not be committed.
 
 ### Single Run
 To run the script once for testing:

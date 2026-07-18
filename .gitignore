@@ -3,9 +3,9 @@
 # Local configurations (contains coordinates and shortcuts)
 config.json
 
-# Local Monument Catalog (your personal images)
-monuments/*
-!monuments/.gitkeep
+# Local Image Catalog (your personal images)
+images/*
+!images/.gitkeep
 
 # Python cache & virtual environment
 __pycache__/

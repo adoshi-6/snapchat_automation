@@ -13,7 +13,7 @@ if sys.platform.startswith("win"):
 
 # Config paths
 CONFIG_PATH = "config.json"
-MONUMENTS_DIR = "monuments"
+IMAGES_DIR = "images"
 
 def run_adb_command(cmd_args, adb_path="adb"):
     """Runs a command via ADB and returns the stdout."""
@@ -56,23 +56,23 @@ def save_config(config):
     with open(CONFIG_PATH, 'w') as f:
         json.dump(config, f, indent=4)
 
-def get_next_monument(config):
-    """Retrieves the path of the next monument image to send."""
-    if not os.path.exists(MONUMENTS_DIR):
-        os.makedirs(MONUMENTS_DIR)
-        print(f"📁 Created '{MONUMENTS_DIR}/' folder. Please place your monument images there.")
+def get_next_image(config):
+    """Retrieves the path of the next image to send."""
+    if not os.path.exists(IMAGES_DIR):
+        os.makedirs(IMAGES_DIR)
+        print(f"📁 Created '{IMAGES_DIR}/' folder. Please place your images there.")
         return None
         
-    images = sorted([f for f in os.listdir(MONUMENTS_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+    images = sorted([f for f in os.listdir(IMAGES_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
     if not images:
-        print(f"⚠️ No images found in '{MONUMENTS_DIR}/' folder. Please add some pictures.")
+        print(f"⚠️ No images found in '{IMAGES_DIR}/' folder. Please add some pictures.")
         return None
         
     next_index = (config["last_sent_index"] + 1) % len(images)
     config["last_sent_index"] = next_index
     save_config(config)
     
-    return os.path.join(MONUMENTS_DIR, images[next_index])
+    return os.path.join(IMAGES_DIR, images[next_index])
 
 def tap_coordinate(coord_str, adb_path):
     """Helper to tap a coordinate string formatted as 'X Y'"""
@@ -84,7 +84,7 @@ def execute_streak():
     adb_path = config["adb_path"]
     
     # 1. Select the next image
-    image_path = get_next_monument(config)
+    image_path = get_next_image(config)
     if not image_path:
         return False
         
