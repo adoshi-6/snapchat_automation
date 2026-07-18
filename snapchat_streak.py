@@ -15,9 +15,10 @@ if sys.platform.startswith("win"):
 CONFIG_PATH = "config.json"
 IMAGES_DIR = "images"
 
-def run_adb_command(cmd_args, adb_path="adb"):
+def run_adb_command(cmd_args, adb_path="adb", device_id=""):
     """Runs a command via ADB and returns the stdout."""
-    full_cmd = [adb_path] + cmd_args
+    target_args = ["-s", device_id] if device_id else []
+    full_cmd = [adb_path] + target_args + cmd_args
     try:
         result = subprocess.run(full_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         return result.stdout.strip()
@@ -74,14 +75,15 @@ def get_next_image(config):
     
     return os.path.join(IMAGES_DIR, images[next_index])
 
-def tap_coordinate(coord_str, adb_path):
+def tap_coordinate(coord_str, adb_path, device_id=""):
     """Helper to tap a coordinate string formatted as 'X Y'"""
-    run_adb_command(["shell", "input", "tap", coord_str], adb_path)
+    run_adb_command(["shell", "input", "tap", coord_str], adb_path, device_id)
     time.sleep(1.0)
 
 def execute_streak():
     config = load_config()
     adb_path = config["adb_path"]
+    device_id = config.get("adb_device_id", "")
     
     # 1. Select the next image
     image_path = get_next_image(config)
@@ -91,7 +93,7 @@ def execute_streak():
     print(f"📸 Preparing to send: {os.path.basename(image_path)}")
     
     # 2. Check ADB connection
-    devices = run_adb_command(["devices"], adb_path)
+    devices = run_adb_command(["devices"], adb_path, device_id)
     if not devices or len(devices.splitlines()) <= 1:
         print("❌ No ADB devices detected! Please launch your emulator and make sure USB debugging is on.")
         return False
@@ -103,19 +105,19 @@ def execute_streak():
     
     # 3. Push image to emulator
     print(f"📤 Pushing image to emulator -> {android_dest}")
-    run_adb_command(["push", image_path, android_dest], adb_path)
+    run_adb_command(["push", image_path, android_dest], adb_path, device_id)
     
     # 4. Trigger Media Scan to update the gallery instantly
     print("🔄 Forcing Android Media scan...")
     # Standard broadcast scanner
-    run_adb_command(["shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", f"file://{android_dest}"], adb_path)
+    run_adb_command(["shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", f"file://{android_dest}"], adb_path, device_id)
     # Modern content call scanner just in case
-    run_adb_command(["shell", "content", "call", "--uri", "content://media", "--method", "scan_file", "--arg", android_dest], adb_path)
+    run_adb_command(["shell", "content", "call", "--uri", "content://media", "--method", "scan_file", "--arg", android_dest], adb_path, device_id)
     time.sleep(2.0)
     
     # 5. Launch Snapchat
     print("👻 Launching Snapchat...")
-    run_adb_command(["shell", "am", "start", "-n", "com.snapchat.android/com.snap.mushroom.MainActivity"], adb_path)
+    run_adb_command(["shell", "am", "start", "-n", "com.snapchat.android/com.snap.mushroom.MainActivity"], adb_path, device_id)
     time.sleep(5.0) # Wait for snapchat to fully load
 
     coords = config["coordinates"]
@@ -124,32 +126,32 @@ def execute_streak():
     print("👉 Navigating Snapchat UI...")
     
     print("  Tapping Gallery Icon...")
-    tap_coordinate(coords["gallery_icon"], adb_path)
+    tap_coordinate(coords["gallery_icon"], adb_path, device_id)
     
     print("  Tapping Camera Roll Tab...")
-    tap_coordinate(coords["camera_roll_tab"], adb_path)
+    tap_coordinate(coords["camera_roll_tab"], adb_path, device_id)
     
     print("  Selecting First Photo...")
-    tap_coordinate(coords["first_photo"], adb_path)
+    tap_coordinate(coords["first_photo"], adb_path, device_id)
     
     print("  Tapping Edit / Send Button...")
-    tap_coordinate(coords["edit_send_button"], adb_path)
+    tap_coordinate(coords["edit_send_button"], adb_path, device_id)
     
     print("  Tapping Search Bar...")
-    tap_coordinate(coords["search_bar"], adb_path)
+    tap_coordinate(coords["search_bar"], adb_path, device_id)
     
     print(f"  Typing Shortcut Name: '{config['shortcut_name']}'...")
-    run_adb_command(["shell", "input", "text", config["shortcut_name"]], adb_path)
+    run_adb_command(["shell", "input", "text", config["shortcut_name"]], adb_path, device_id)
     time.sleep(2.0)
     
     print("  Selecting Shortcut from search results...")
-    tap_coordinate(coords["first_search_result"], adb_path)
+    tap_coordinate(coords["first_search_result"], adb_path, device_id)
     
     print("  Tapping Select All inside the shortcut...")
-    tap_coordinate(coords["select_all_shortcut"], adb_path)
+    tap_coordinate(coords["select_all_shortcut"], adb_path, device_id)
     
     print("  Tapping Send Arrow...")
-    tap_coordinate(coords["send_arrow"], adb_path)
+    tap_coordinate(coords["send_arrow"], adb_path, device_id)
     
     print("✅ Daily Streak Sent successfully!")
     return True
