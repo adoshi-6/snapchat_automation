@@ -6,12 +6,11 @@ import subprocess
 import argparse
 from datetime import datetime, timedelta
 
-# Ensure UTF-8 stdout encoding on Windows
+# Set UTF-8 encoding on Windows
 if sys.platform.startswith("win"):
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-# Config paths
 CONFIG_PATH = "config.json"
 IMAGES_DIR = "images"
 
@@ -23,26 +22,26 @@ def run_adb_command(cmd_args, adb_path="adb", device_id=""):
         result = subprocess.run(full_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"❌ ADB Command Failed: {' '.join(full_cmd)}")
+        print(f"[ERROR] ADB Command Failed: {' '.join(full_cmd)}")
         print(f"Error output: {e.stderr.strip()}")
         return None
 
 def load_config():
     if not os.path.exists(CONFIG_PATH):
-        # Create default config
+        # Default configuration
         default_config = {
-            "adb_path": "adb",  # Assumes adb is in system PATH, or specify full path
-            "adb_device_id": "", # Empty uses default/only device
+            "adb_path": "adb",  # adb path in system or local folder
+            "adb_device_id": "", # target device ID (e.g. localhost:5555)
             "shortcut_name": "Streaks",
             "last_sent_index": -1,
             "coordinates": {
-                "gallery_icon": "200 1800",       # Adjust based on emulator screen resolution
+                "gallery_icon": "200 1800",       # click coordinates
                 "camera_roll_tab": "540 180",
                 "first_photo": "200 350",
                 "edit_send_button": "900 1800",
                 "search_bar": "300 120",
                 "first_search_result": "250 250",
-                "select_all_shortcut": "920 250",  # Tapping 'select all' button in shortcut
+                "select_all_shortcut": "920 250",  # select all button in shortcut
                 "send_arrow": "950 1800"
             }
         }
@@ -61,12 +60,12 @@ def get_next_image(config):
     """Retrieves the path of the next image to send."""
     if not os.path.exists(IMAGES_DIR):
         os.makedirs(IMAGES_DIR)
-        print(f"📁 Created '{IMAGES_DIR}/' folder. Please place your images there.")
+        print(f"[INFO] Created '{IMAGES_DIR}/' folder. Please place your images there.")
         return None
         
     images = sorted([f for f in os.listdir(IMAGES_DIR) if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
     if not images:
-        print(f"⚠️ No images found in '{IMAGES_DIR}/' folder. Please add some pictures.")
+        print(f"[WARNING] No images found in '{IMAGES_DIR}/' folder. Please add some pictures.")
         return None
         
     next_index = (config["last_sent_index"] + 1) % len(images)
@@ -85,45 +84,45 @@ def execute_streak():
     adb_path = config["adb_path"]
     device_id = config.get("adb_device_id", "")
     
-    # 1. Select the next image
+    # Select next image
     image_path = get_next_image(config)
     if not image_path:
         return False
         
-    print(f"📸 Preparing to send: {os.path.basename(image_path)}")
+    print(f"[INFO] Preparing to send: {os.path.basename(image_path)}")
     
-    # 2. Check ADB connection
+    # Check ADB connection
     devices = run_adb_command(["devices"], adb_path, device_id)
     if not devices or len(devices.splitlines()) <= 1:
-        print("❌ No ADB devices detected! Please launch your emulator and make sure USB debugging is on.")
+        print("[ERROR] No ADB devices detected! Please launch your emulator and make sure USB debugging is on.")
         return False
         
-    print("🤖 ADB Device detected. Proceeding...")
+    print("[INFO] ADB Device detected. Proceeding...")
 
     # Destination on Android
     android_dest = "/sdcard/Pictures/streak.jpg"
     
-    # 3. Push image to emulator
-    print(f"📤 Pushing image to emulator -> {android_dest}")
+    # Push image to emulator
+    print(f"[INFO] Pushing image to emulator -> {android_dest}")
     run_adb_command(["push", image_path, android_dest], adb_path, device_id)
     
-    # 4. Trigger Media Scan to update the gallery instantly
-    print("🔄 Forcing Android Media scan...")
-    # Standard broadcast scanner
+    # Trigger media scan
+    print("[INFO] Forcing Android Media scan...")
+    # Broadcast scanner
     run_adb_command(["shell", "am", "broadcast", "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE", "-d", f"file://{android_dest}"], adb_path, device_id)
-    # Modern content call scanner just in case
+    # Content provider scanner
     run_adb_command(["shell", "content", "call", "--uri", "content://media", "--method", "scan_file", "--arg", android_dest], adb_path, device_id)
     time.sleep(2.0)
     
-    # 5. Launch Snapchat
-    print("👻 Launching Snapchat...")
+    # Launch Snapchat
+    print("[INFO] Launching Snapchat...")
     run_adb_command(["shell", "am", "start", "-n", "com.snapchat.android/com.snap.mushroom.MainActivity"], adb_path, device_id)
-    time.sleep(5.0) # Wait for snapchat to fully load
+    time.sleep(5.0) # Wait for Snapchat to load
 
     coords = config["coordinates"]
     
-    # 6. Simulate UI Actions
-    print("👉 Navigating Snapchat UI...")
+    # Simulate UI Actions
+    print("[INFO] Navigating Snapchat UI...")
     
     print("  Tapping Gallery Icon...")
     tap_coordinate(coords["gallery_icon"], adb_path, device_id)
@@ -153,7 +152,7 @@ def execute_streak():
     print("  Tapping Send Arrow...")
     tap_coordinate(coords["send_arrow"], adb_path, device_id)
     
-    print("✅ Daily Streak Sent successfully!")
+    print("[SUCCESS] Daily Streak Sent successfully!")
     return True
 
 def log_run(status, message=""):
@@ -167,7 +166,7 @@ def sleep_until_time(target_time_str):
     try:
         hour, minute = map(int, target_time_str.split(':'))
     except ValueError:
-        print(f"❌ Invalid time format: {target_time_str}. Expected HH:MM.")
+        print(f"[ERROR] Invalid time format: {target_time_str}. Expected HH:MM.")
         sys.exit(1)
         
     now = datetime.now()
@@ -178,7 +177,7 @@ def sleep_until_time(target_time_str):
         target_time += timedelta(days=1)
         
     wait_seconds = (target_time - now).total_seconds()
-    print(f"⏳ Sleeping until tomorrow/later today: {target_time.strftime('%Y-%m-%d %H:%M:%S')} ({wait_seconds:.0f} seconds)...")
+    print(f"[INFO] Sleeping until target run time: {target_time.strftime('%Y-%m-%d %H:%M:%S')} ({wait_seconds:.0f} seconds)...")
     time.sleep(wait_seconds)
 
 if __name__ == "__main__":
@@ -189,11 +188,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.daemon:
-        print(f"🔄 Starting Snapchat Streak Automation in daemon mode. Target time: {args.time} daily.")
+        print(f"[INFO] Starting Snapchat Streak Automation in daemon mode. Target time: {args.time} daily.")
         log_run("STARTED", f"Daemon mode enabled for daily time: {args.time}")
         while True:
             sleep_until_time(args.time)
-            print("🚀 Triggering daily streak run...")
+            print("[INFO] Triggering daily streak run...")
             try:
                 success = execute_streak()
                 if success:
@@ -201,7 +200,7 @@ if __name__ == "__main__":
                 else:
                     log_run("FAILED", "Daily streak execution failed (see terminal output for details).")
             except Exception as e:
-                print(f"❌ Error during execution: {e}")
+                print(f"[ERROR] Error during execution: {e}")
                 log_run("ERROR", f"Exception during run: {e}")
     else:
         # Run once
