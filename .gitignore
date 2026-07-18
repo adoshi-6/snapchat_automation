@@ -1,0 +1,17 @@
+# Snapchat Streak Automation GitIgnore
+
+# Local configurations (contains coordinates and shortcuts)
+config.json
+
+# Local Monument Catalog (your personal images)
+monuments/
+
+# Python cache & virtual environment
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Logs
+*.log
