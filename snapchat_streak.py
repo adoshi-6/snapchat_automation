@@ -3,6 +3,13 @@ import sys
 import json
 import time
 import subprocess
+import argparse
+from datetime import datetime, timedelta
+
+# Ensure UTF-8 stdout encoding on Windows
+if sys.platform.startswith("win"):
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
 # Config paths
 CONFIG_PATH = "config.json"
@@ -79,7 +86,7 @@ def execute_streak():
     # 1. Select the next image
     image_path = get_next_monument(config)
     if not image_path:
-        return
+        return False
         
     print(f"📸 Preparing to send: {os.path.basename(image_path)}")
     
@@ -87,7 +94,7 @@ def execute_streak():
     devices = run_adb_command(["devices"], adb_path)
     if not devices or len(devices.splitlines()) <= 1:
         print("❌ No ADB devices detected! Please launch your emulator and make sure USB debugging is on.")
-        return
+        return False
         
     print("🤖 ADB Device detected. Proceeding...")
 
@@ -145,6 +152,59 @@ def execute_streak():
     tap_coordinate(coords["send_arrow"], adb_path)
     
     print("✅ Daily Streak Sent successfully!")
+    return True
+
+def log_run(status, message=""):
+    """Logs run status to scheduler.log."""
+    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scheduler.log")
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] STATUS: {status} | {message}\n")
+
+def sleep_until_time(target_time_str):
+    """Sleeps until the target daily time (HH:MM)."""
+    try:
+        hour, minute = map(int, target_time_str.split(':'))
+    except ValueError:
+        print(f"❌ Invalid time format: {target_time_str}. Expected HH:MM.")
+        sys.exit(1)
+        
+    now = datetime.now()
+    target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    
+    if target_time <= now:
+        # Target time has already passed today, scheduled for tomorrow
+        target_time += timedelta(days=1)
+        
+    wait_seconds = (target_time - now).total_seconds()
+    print(f"⏳ Sleeping until tomorrow/later today: {target_time.strftime('%Y-%m-%d %H:%M:%S')} ({wait_seconds:.0f} seconds)...")
+    time.sleep(wait_seconds)
 
 if __name__ == "__main__":
-    execute_streak()
+    parser = argparse.ArgumentParser(description="Snapchat Streak Automation Daemon")
+    parser.add_argument("--once", action="store_true", help="Run the streak once and exit (default)")
+    parser.add_argument("--daemon", action="store_true", help="Run in daemon mode daily at specified time")
+    parser.add_argument("--time", type=str, default="10:00", help="Target daily execution time in HH:MM format (default: 10:00)")
+    args = parser.parse_args()
+
+    if args.daemon:
+        print(f"🔄 Starting Snapchat Streak Automation in daemon mode. Target time: {args.time} daily.")
+        log_run("STARTED", f"Daemon mode enabled for daily time: {args.time}")
+        while True:
+            sleep_until_time(args.time)
+            print("🚀 Triggering daily streak run...")
+            try:
+                success = execute_streak()
+                if success:
+                    log_run("SUCCESS", "Daily streak executed successfully.")
+                else:
+                    log_run("FAILED", "Daily streak execution failed (see terminal output for details).")
+            except Exception as e:
+                print(f"❌ Error during execution: {e}")
+                log_run("ERROR", f"Exception during run: {e}")
+    else:
+        # Run once
+        success = execute_streak()
+        if success:
+            log_run("ONCE_SUCCESS", "Executed streak once successfully.")
+        else:
+            log_run("ONCE_FAILED", "Executed streak once with failures.")
